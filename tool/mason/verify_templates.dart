@@ -16,9 +16,9 @@ Future<void> main() async {
   }
 
   try {
-    final listed = await Process.run("git", ["ls-files", "--cached", "--others", "--exclude-standard"], workingDirectory: root.path);
+    final listed = await Process.run("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], workingDirectory: root.path);
     if (listed.exitCode != 0) throw StateError("Cannot enumerate source files");
-    for (final relative in (listed.stdout as String).split("\n").where((value) => value.isNotEmpty)) {
+    for (final relative in (listed.stdout as String).split("\u0000").where((value) => value.isNotEmpty)) {
       final source = File(path.join(root.path, relative));
       if (!source.existsSync()) continue;
       final target = File(path.join(workspace.path, relative));
