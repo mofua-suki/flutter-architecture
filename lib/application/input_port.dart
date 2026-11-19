@@ -3,8 +3,6 @@ import "package:flutter/foundation.dart";
 
 import "output_port.dart";
 
-export "exception.dart";
-
 /// 入力ポート
 ///
 /// 入力ポートは、ユースケースの入力を表現します。
