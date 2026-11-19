@@ -23,7 +23,7 @@ abstract class ProjectAstVisitor extends SimpleAstVisitor<void> {
   String? getFilePath(AstNode node) {
     final root = node.root;
     if (root is! CompilationUnit) return null;
-    return root.declaredFragment?.source.fullName;
+    return root.declaredFragment?.source.fullName.replaceAll(r"\", "/");
   }
 
   /// プロジェクト直下のlib/配下のファイルかどうかを判定する

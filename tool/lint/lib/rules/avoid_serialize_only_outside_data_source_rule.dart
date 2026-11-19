@@ -38,7 +38,7 @@ class _Visitor extends ProjectAstVisitor {
   bool _isSameFile(String callerPath, ConstructorElement targetElement) {
     final targetPath = targetElement.library.firstFragment.source.fullName;
     final normalizedCallerPath = callerPath.replaceAll(".g.dart", ".dart");
-    final normalizedTargetPath = targetPath.replaceAll(".g.dart", ".dart");
+    final normalizedTargetPath = targetPath.replaceAll("\\", "/").replaceAll(".g.dart", ".dart");
     return normalizedCallerPath == normalizedTargetPath;
   }
 
