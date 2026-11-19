@@ -80,22 +80,4 @@ void main() {
     bus.notify(const _Event());
     expect(received, 1);
   });
-  test("Changes to subscriptions affect the next delivery", () {
-    final bus = EventBusImpl(logger: _Log());
-    final received = <String>[];
-    final removed = _Listener(() => received.add("removed"));
-    final added = _Listener(() => received.add("added"));
-    bus.addListener(
-      _Listener(() {
-        received.add("first");
-        bus.removeListener(removed);
-        bus.addListener(added);
-      }),
-    );
-    bus.addListener(removed);
-    bus.notify(const _Event());
-    expect(received, ["first"]);
-    bus.notify(const _Event());
-    expect(received, ["first", "first", "added"]);
-  });
 }

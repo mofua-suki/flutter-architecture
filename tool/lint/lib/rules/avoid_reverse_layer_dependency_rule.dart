@@ -79,15 +79,15 @@ class _Visitor extends ProjectAstVisitor {
     Map<String, Element> names,
   ) {
     if (!shouldLint(node)) return;
-    final path = getFilePath(node) ?? "";
-    if (_LayerEnum.fromPath(path) == null) return;
+    final path = getFilePath(node);
+    final packageRoot = rule.packageRoot;
+    if (path == null || packageRoot == null) return;
 
-    bool isForbidden(String uri) => !isAllowedLayerImport(currentPath: path, importUri: uri);
+    bool isForbidden(String uri) => !isAllowedLayerImport(currentPath: path, importUri: uri, packageRoot: packageRoot);
 
-    final libRoot = path.substring(0, path.indexOf("/lib/") + 5);
     bool isForbiddenLibrary(LibraryElement? target) {
       final targetPath = target?.firstFragment.source.fullName;
-      return targetPath != null && targetPath.startsWith(libRoot) && isForbidden(targetPath);
+      return targetPath != null && isProjectLibPath(targetPath, packageRoot) && isForbidden(targetPath);
     }
 
     // Check every explicitly named branch, including inactive configurations.
@@ -127,16 +127,37 @@ class _Visitor extends ProjectAstVisitor {
   }
 }
 
+String? _libRelative(String path, String packageRoot) {
+  if (!isProjectLibPath(path, packageRoot)) return null;
+  final root = packageRoot.replaceAll(r"\", "/").replaceFirst(RegExp(r"/$"), "");
+  return path.replaceAll(r"\", "/").substring(root.length + 5);
+}
+
+String? _importRelative(String current, String imported, String packageRoot) {
+  final direct = _libRelative(imported, packageRoot);
+  if (direct != null) return direct;
+  final uri = Uri.tryParse(imported.replaceAll(r"\", "/"));
+  if (uri == null) return null;
+  if (uri.scheme == "package") return uri.pathSegments.skip(1).join("/");
+  if (uri.hasScheme || uri.path.startsWith("/")) return null;
+  final resolved = Uri(path: "/lib/$current").resolveUri(uri).path;
+  return resolved.startsWith("/lib/") ? resolved.substring(5) : null;
+}
+
 @visibleForTesting
 bool isAllowedLayerImport({
   required String currentPath,
   required String importUri,
+  required String packageRoot,
 }) {
-  final currentLayer = _LayerEnum.fromPath(currentPath);
-  final importedLayer = _LayerEnum.fromPath(importUri);
+  final current = _libRelative(currentPath, packageRoot);
+  if (current == null) return true;
+  final imported = _importRelative(current, importUri, packageRoot);
+  final currentLayer = _LayerEnum.fromRelativePath(current);
+  final importedLayer = imported == null ? null : _LayerEnum.fromRelativePath(imported);
   if (currentLayer == null || importedLayer == null) return true;
 
-  if (currentLayer == _LayerEnum.infrastructure && importedLayer == _LayerEnum.application && importUri.contains("/application/outbound_port/")) {
+  if (currentLayer == _LayerEnum.infrastructure && imported?.startsWith("application/outbound_port/") == true) {
     return true;
   }
 
@@ -150,15 +171,13 @@ enum _LayerEnum {
   infrastructure,
   common;
 
-  static _LayerEnum? fromPath(String path) {
+  static _LayerEnum? fromRelativePath(String path) {
+    final first = path.split("/").first;
     for (final layer in _LayerEnum.values) {
-      if (path.contains("/$layer/")) return layer;
+      if (first == layer.name) return layer;
     }
     return null;
   }
-
-  @override
-  String toString() => name;
 }
 
 sealed class _Layer {
