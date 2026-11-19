@@ -81,12 +81,14 @@ void main() {
           violates: true,
         );
       });
-      test("[Negative] $directive の非選択条件分岐の直接逆依存を拒否する", () async {
-        final code = '$directive "../domain/allowed.dart" if (dart.library.html) "../application/forbidden.dart";';
-        await helper.assertDiagnostics("// ignore: unused_import\n$code", [
-          helper.lint(25 + code.lastIndexOf('"../'), 31),
-        ]);
-      });
+      for (final forbidden in ["../application/forbidden.dart", "/application/forbidden.dart"]) {
+        test("[Negative] $directive の非選択条件分岐 $forbidden の直接逆依存を拒否する", () async {
+          final code = '$directive "../domain/allowed.dart" if (dart.library.html) "$forbidden";';
+          await helper.assertDiagnostics("// ignore: unused_import\n$code", [
+            helper.lint(25 + code.lastIndexOf('"$forbidden"'), forbidden.length + 2),
+          ]);
+        });
+      }
       test("[Positive] $directive のsetterをhideで除外できる", () async {
         helper.newFile(
           "${helper.testPackageLibPath}/application/forbidden.dart",

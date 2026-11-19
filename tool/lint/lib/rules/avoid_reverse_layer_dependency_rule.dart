@@ -139,7 +139,8 @@ String? _importRelative(String current, String imported, String packageRoot) {
   final uri = Uri.tryParse(imported.replaceAll(r"\", "/"));
   if (uri == null) return null;
   if (uri.scheme == "package") return uri.pathSegments.skip(1).join("/");
-  if (uri.hasScheme || uri.path.startsWith("/")) return null;
+  if (uri.hasScheme || uri.hasAuthority) return null;
+  if (uri.path.startsWith("/")) return uri.normalizePath().path.substring(1);
   final resolved = Uri(path: "/lib/$current").resolveUri(uri).path;
   return resolved.startsWith("/lib/") ? resolved.substring(5) : null;
 }
