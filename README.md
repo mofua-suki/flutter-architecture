@@ -65,14 +65,13 @@ DomainEventの発行は保存完了後に行います。
 EventBusは同期配信で、再送や永続化は行いません。
 リスナーの対象判定と通知の失敗は、イベント型、リスナー型、例外、StackTraceとともに記録し、後続リスナーへの配送を続けます。保存成功後の配送失敗はCommandの失敗にしません。
 リスナーではイベントのキュー投入までを行い、非同期処理はBLoC Eventのハンドラへ置きます。保存成功は全画面の更新完了を意味しません。更新されなかった画面は「再読み込み」で復旧できます。
-標準構成はConsoleLoggerを使い、診断先の失敗でも保存結果と後続配送を維持します。
+標準構成では、DIがコンストラクタを通して`ConsoleLogger` を注入します。診断先の失敗でも保存結果と後続配送を維持します。
 UseCaseからOutputPort、Resultを経由する失敗は元のStackTraceを保持し、unwrapOrThrowでもその発生箇所を引き継ぎます。
 
 ## サンプルの構成
 
 - UseCase の共通依存は Logger とし、Command には DomainEventPublisher も注入します。
 - Repositoryは `Repository`、`ReadRepository`、`WriteRepository` の基底契約とカウンター用の操作に絞りました。
-- DIはコンストラクタで接続し、Loggerにはサンプル用の `NoopLogger` を注入します。
 - 店舗業務、API通信、DB、トランザクション実装は含めていません。
 - `build_runner` による生成を必要としない構成です。
 
