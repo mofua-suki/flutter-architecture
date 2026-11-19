@@ -125,8 +125,18 @@ void main() {
     });
   });
   group("AvoidReverseLayerDependencyRule", () {
+    test("プロジェクトより外の層名とパス区切りは依存判定に影響しない", () {
+      for (final packageRoot in ["/work/presentation/project", r"C:\work\presentation\project"]) {
+        final separator = packageRoot.contains(r"\") ? r"\" : "/";
+        final path = [packageRoot, "lib", "domain", "model.dart"].join(separator);
+        expect(isAllowedLayerImport(currentPath: path, importUri: "../application/use_case.dart", packageRoot: packageRoot), isFalse);
+        expect(isAllowedLayerImport(currentPath: path, importUri: "model.dart", packageRoot: packageRoot), isTrue);
+      }
+    });
+
     test("[Positive] Infrastructureから通常のApplication実装への依存を拒否する", () {
       final result = isAllowedLayerImport(
+        packageRoot: "/project",
         currentPath: "/project/lib/infrastructure/event/adapter.dart",
         importUri: "package:waiter/application/use_case.dart",
       );
@@ -136,6 +146,7 @@ void main() {
 
     test("[Negative] InfrastructureからApplicationの出力側ポートへの依存を許可する", () {
       final result = isAllowedLayerImport(
+        packageRoot: "/project",
         currentPath: "/project/lib/infrastructure/event/adapter.dart",
         importUri: "package:waiter/application/outbound_port/domain_event_publisher.dart",
       );
@@ -145,6 +156,7 @@ void main() {
 
     test("[Negative] Applicationの結果通知用OutputPortは例外に含めない", () {
       final result = isAllowedLayerImport(
+        packageRoot: "/project",
         currentPath: "/project/lib/infrastructure/event/adapter.dart",
         importUri: "package:waiter/application/output_port.dart",
       );
@@ -155,6 +167,7 @@ void main() {
     test("[Negative] 通常の依存方向を維持する", () {
       expect(
         isAllowedLayerImport(
+          packageRoot: "/project",
           currentPath: "/project/lib/application/use_case.dart",
           importUri: "package:waiter/domain/model.dart",
         ),
@@ -162,6 +175,7 @@ void main() {
       );
       expect(
         isAllowedLayerImport(
+          packageRoot: "/project",
           currentPath: "/project/lib/domain/model.dart",
           importUri: "package:waiter/application/use_case.dart",
         ),

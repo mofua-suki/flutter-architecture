@@ -47,7 +47,6 @@ abstract class ProjectAstVisitor extends SimpleAstVisitor<void> {
   }
 }
 
-@visibleForTesting
 bool isProjectLibPath(String path, String? packageRoot) {
   if (packageRoot == null) return false;
   final normalized = path.replaceAll(r"\", "/");
