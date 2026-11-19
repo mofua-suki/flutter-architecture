@@ -34,11 +34,6 @@ abstract class Entity<ID extends Identifier> with EquatableMixin implements Doma
   List<Object?> get props => [identifier];
 }
 
-/// 識別可能オブジェクト
-///
-/// [Entity]を参照してください。
-typedef Identifiable<ID extends Identifier> = Entity<ID>;
-
 /// 値オブジェクト
 ///
 /// 値オブジェクトを表現します。
@@ -50,8 +45,3 @@ abstract class ValueObject with EquatableMixin implements DomainObject {
   @override
   List<Object?> get props;
 }
-
-/// 識別不可オブジェクト
-///
-/// [ValueObject]を参照してください。
-typedef Unidentifiable = ValueObject;
