@@ -20,7 +20,7 @@ jobs:
         working-directory: tool/lint
       - run: dart test
         working-directory: tool/lint
-      - run: dart format --output=none --set-exit-if-changed lib test tool/mason/generator tool/mason/generate_bloc.dart tool/mason/generate_use_case.dart
+      - run: dart format --output=none --set-exit-if-changed lib test tool/lint/lib tool/lint/test tool/mason/*.dart tool/mason/generator
       - run: flutter analyze --no-pub
       - run: flutter test --no-pub
       - run: dart run tool/mason/verify_templates.dart

@@ -12,16 +12,3 @@ class UnexpectedThrowableException implements Exception {
   @override
   String toString() => "UnexpectedThrowableException: $original";
 }
-
-/// 予期しない null 例外
-///
-/// この例外は、本来 null ではないと期待される値が null であった場合にスローされます。
-@immutable
-class UnexpectedNullException implements Exception {
-  final String message;
-
-  const UnexpectedNullException(this.message);
-
-  @override
-  String toString() => "UnexpectedNullException: $message";
-}

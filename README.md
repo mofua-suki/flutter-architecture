@@ -115,7 +115,7 @@ lintパッケージはアプリと別に依存解決します。
 
 ```sh
 flutter pub get
-dart format --output=none --set-exit-if-changed lib test tool/mason/generator tool/mason/generate_bloc.dart tool/mason/generate_use_case.dart
+dart format --output=none --set-exit-if-changed lib test tool/lint/lib tool/lint/test tool/mason/*.dart tool/mason/generator
 flutter analyze
 flutter test
 flutter build web
