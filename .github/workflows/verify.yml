@@ -1,5 +1,8 @@
 name: Verify architecture
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -17,6 +20,7 @@ jobs:
         working-directory: tool/lint
       - run: dart test
         working-directory: tool/lint
+      - run: dart format --output=none --set-exit-if-changed lib test tool/mason/generator tool/mason/generate_bloc.dart tool/mason/generate_use_case.dart
       - run: flutter analyze --no-pub
       - run: flutter test --no-pub
       - run: dart run tool/mason/verify_templates.dart
