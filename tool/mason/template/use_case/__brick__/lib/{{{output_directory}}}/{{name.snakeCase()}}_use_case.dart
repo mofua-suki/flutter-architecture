@@ -37,6 +37,3 @@ class {{name.pascalCase()}}InputPortParameter extends InputPortParameter {
   @override
   List<Object?> get props => [];
 }
-
-/// 出力ポート
-class {{name.pascalCase()}}OutputPort with OutputPortMixin<{{return_type}}> implements OutputPort<{{return_type}}> {}

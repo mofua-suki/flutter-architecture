@@ -1,5 +1,5 @@
 name: use_case
-description: Generate a UseCase boilerplate (InputPort / UseCase / Parameter / OutputPort)
+description: Generate a UseCase boilerplate (InputPort / UseCase / Parameter)
 version: 0.1.0+1
 environment:
   mason: ">=0.1.0 <0.2.0"
