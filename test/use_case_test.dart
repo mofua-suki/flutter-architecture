@@ -27,8 +27,14 @@ void main() {
     final success = InputPortInvoker(_Query(() => 2, logger: logger));
     expect(await success.invoke(const _Parameter()).unwrapOrThrow(), 2);
     final error = Exception("query failed");
-    final failure = InputPortInvoker(_Query(() => throw error, logger: logger));
-    await expectLater(failure.invoke(const _Parameter()).unwrapOrThrow(), throwsA(same(error)));
+    final stackTrace = StackTrace.fromString("original query failure");
+    final failure = InputPortInvoker(_Query(() => Error.throwWithStackTrace(error, stackTrace), logger: logger));
+    final result = await failure.invoke(const _Parameter());
+    expect(
+      result,
+      isA<Failure>().having((failure) => failure.exception, "exception", same(error)).having((failure) => failure.stackTrace.toString(), "stack trace", stackTrace.toString()),
+    );
+    expect(result.unwrapOrThrow, throwsA(same(error)));
   });
 
   test("ErrorをExceptionに包んで返す", () async {
