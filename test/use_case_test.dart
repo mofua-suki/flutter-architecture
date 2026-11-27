@@ -22,6 +22,21 @@ void main() {
     expect(await InputPortInvoker(_Query(() async => 3)).invoke(const _Parameter()).unwrapOrThrow(), 3);
   });
 
+  test("ログ出力が失敗しても処理結果と元の例外を保持する", () async {
+    const logger = _FailingLogger();
+    final success = InputPortInvoker(_Query(() => 2, logger: logger));
+    expect(await success.invoke(const _Parameter()).unwrapOrThrow(), 2);
+    final error = Exception("query failed");
+    final stackTrace = StackTrace.fromString("original query failure");
+    final failure = InputPortInvoker(_Query(() => Error.throwWithStackTrace(error, stackTrace), logger: logger));
+    final result = await failure.invoke(const _Parameter());
+    expect(
+      result,
+      isA<Failure>().having((failure) => failure.exception, "exception", same(error)).having((failure) => failure.stackTrace.toString(), "stack trace", stackTrace.toString()),
+    );
+    expect(result.unwrapOrThrow, throwsA(same(error)));
+  });
+
   test("ErrorをExceptionに包んで返す", () async {
     final result = await InputPortInvoker(_Query(() => throw StateError("broken"))).invoke(const _Parameter());
     expect(result, isA<Failure>().having((failure) => failure.exception, "exception", isA<UnexpectedThrowableException>()));
@@ -48,7 +63,7 @@ class _Parameter extends InputPortParameter {
 
 class _Query extends Query<_Parameter, int> {
   final FutureOr<int> Function() action;
-  const _Query(this.action) : super(logger: const NoopLogger());
+  const _Query(this.action, {super.logger = const NoopLogger()});
   @override
   FutureOr<int> query(_Parameter param) => action();
 }
@@ -61,4 +76,12 @@ class _ThrowingOutput implements OutputPort<int> {
   void onError(Exception e, StackTrace stackTrace) {
     errorCalls++;
   }
+}
+
+class _FailingLogger extends NoopLogger {
+  const _FailingLogger();
+  @override
+  void debug({String? message, Object? error, StackTrace? stackTrace, Context? context}) => throw StateError("debug failed");
+  @override
+  void error({String? message, Object? error, StackTrace? stackTrace, Context? context}) => throw StateError("error logging failed");
 }
