@@ -93,6 +93,8 @@ BLoCは `lib/presentation/bloc/<出力先>/`、UseCaseは `lib/application/<出�
 名前はPascalCaseで指定します。出力先は各階層を英小文字で始め、英小文字・数字・アンダースコアを使います。階層は `/` で区切ります。
 既存ファイルは上書きしません。
 
+UseCaseの出力先には `lib/application` からの相対パス（例 `product/catalog`）を渡します。末尾の `query` と `command` は生成側で付ける予約名です。
+
 生成したBLoCは空のStateDataで初期化を完了します。
 UseCaseは未実装箇所が分かるよう `UnimplementedError` を返す雛形です。
 Queryの `Never` を実際の戻り値に置き換え、Repositoryの注入と処理を実装してください。

@@ -75,6 +75,8 @@ dart run tool/mason/generate_use_case.dart SaveProduct command product
 
 BLoCs go under `lib/presentation/bloc/<directory>/`. Use cases go under `lib/application/<directory>/query/` or `command/`. Matching tests go under `test/`. Use PascalCase names and slash-separated directory segments beginning with a lowercase letter and containing lowercase letters, digits or underscores. The generators skip existing files.
 
+For a use case, pass a feature path relative to `lib/application`, such as `product/catalog`. The generator appends `query` or `command` and reserves those names for the final segment.
+
 A generated BLoC initializes with empty state data. Generated use cases throw `UnimplementedError`. Replace a query's `Never` with the result type, inject the repository, implement the operation and update the generated test expectations. For event wiring, see `CounterBloc.domainEventBindings` in the constructor and the increment command.
 
 ## Linter
