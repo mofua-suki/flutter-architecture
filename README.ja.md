@@ -116,7 +116,8 @@ lintパッケージはアプリと別に依存解決します。
 アプリのルートで実行します。
 
 ```sh
-flutter pub get
+flutter pub get --enforce-lockfile
+(cd tool/lint && dart pub get --enforce-lockfile)
 dart format --output=none --set-exit-if-changed lib test tool/lint/lib tool/lint/test tool/mason/*.dart tool/mason/generator
 flutter analyze
 flutter test
@@ -127,7 +128,7 @@ lintパッケージは別に検証します。
 
 ```sh
 cd tool/lint
-dart pub get
+dart pub get --enforce-lockfile
 dart analyze
 dart test
 ```
@@ -162,4 +163,4 @@ API、認証、DB、永続イベント配信、トランザクションはサン
 ## 継続検証
 
 GitHub Actionsでアプリの解析とテスト、独自lintの解析とテスト、Mason生成物の解析とテストを実行します。
-生成物の検証は `dart run tool/mason/verify_templates.dart` で一時コピー上にBLoC、Query、Commandを生成して行い、作業中のソースを変更しません。
+生成物の検証は `git clone` で取得した作業ツリーのルートから `dart run tool/mason/verify_templates.dart` で一時コピー上にBLoC、Query、Commandを生成して行い、作業中のソースを変更しません。

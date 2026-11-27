@@ -88,7 +88,8 @@ Resolve the lint package separately to isolate its analyzer 13.0.0 dependency fr
 Run these commands from the app root.
 
 ```sh
-flutter pub get
+flutter pub get --enforce-lockfile
+(cd tool/lint && dart pub get --enforce-lockfile)
 dart format --output=none --set-exit-if-changed lib test tool/lint/lib tool/lint/test tool/mason/*.dart tool/mason/generator
 flutter analyze
 flutter test
@@ -99,7 +100,7 @@ Check the lint package separately from the app root.
 
 ```sh
 cd tool/lint
-dart pub get
+dart pub get --enforce-lockfile
 dart analyze
 dart test
 ```
@@ -126,4 +127,4 @@ Screens share the repository and event bus. Each owns its BLoC. The first uses `
 
 ## Continuous verification
 
-GitHub Actions analyzes and tests the app, the custom lint plugin and the Mason output. Run `dart run tool/mason/verify_templates.dart` to generate and verify a BLoC, query and command in a temporary copy.
+GitHub Actions analyzes and tests the app, the custom lint plugin and the Mason output. From the root of a checkout created with `git clone`, run `dart run tool/mason/verify_templates.dart` to generate and verify a BLoC, query and command in a temporary copy.

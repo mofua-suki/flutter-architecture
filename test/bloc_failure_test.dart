@@ -13,14 +13,24 @@ import "package:test/test.dart";
 
 class _Subscriber extends Mock implements core.DomainEventSubscriber {}
 
+class _ThrowingLogger extends NoopLogger {
+  final errors = <Object?>[];
+  @override
+  void error({String? message, Object? error, StackTrace? stackTrace, core.Context? context}) {
+    errors.add(error);
+    throw StateError("log");
+  }
+}
+
 class _Fetch implements FetchCounterInputPort {
+  final failure = Exception("read");
   bool fail = false;
   Completer<void>? gate;
   @override
   Future<void> perform(FetchCounterInputPortParameter parameter, OutputPort<Counter> output) async {
     await gate?.future;
     if (fail) {
-      await output.onError(Exception("read"), StackTrace.current);
+      await output.onError(failure, StackTrace.current);
     } else {
       await output.onSuccess(const Counter(7));
     }
@@ -28,11 +38,12 @@ class _Fetch implements FetchCounterInputPort {
 }
 
 class _Increment implements IncrementCounterInputPort {
+  final failure = Exception("save");
   bool fail = true;
   @override
   Future<void> perform(IncrementCounterInputPortParameter parameter, OutputPort<void> output) async {
     if (fail) {
-      await output.onError(Exception("save"), StackTrace.current);
+      await output.onError(failure, StackTrace.current);
     } else {
       await output.onSuccess(null);
     }
@@ -45,26 +56,33 @@ Future<void> _until(CounterBloc bloc, bool Function(CounterState) matches) async
 }
 
 void main() {
-  test("Initial load can recover after failure", () async {
+  test("Initial load keeps the original failure and can retry when logging throws", () async {
     final fetch = _Fetch()..fail = true;
-    final bloc = CounterBloc(fetchCounter: fetch, incrementCounter: _Increment(), eventSubscriber: _Subscriber(), logger: const NoopLogger());
+    final logger = _ThrowingLogger();
+    final bloc = CounterBloc(fetchCounter: fetch, incrementCounter: _Increment(), eventSubscriber: _Subscriber(), logger: logger);
     addTearDown(bloc.close);
     bloc.requestInitialLoad(const CounterInitialLoadRequested());
     await _until(bloc, (state) => state is CounterInitializeErrorState);
+    expect((bloc.state as CounterInitializeErrorState).cause, same(fetch.failure));
+    expect(logger.errors.single, same(fetch.failure));
     fetch.fail = false;
     bloc.add(const CounterRefreshRequested());
     await _until(bloc, (state) => state is CounterPostInitializedReadyState);
     expect((bloc.state as CounterPostInitializedReadyState).data.counter.value, 7);
   });
-  test("Save failure preserves data and permits another operation", () async {
+  test("Save keeps the original failure and data and can retry when logging throws", () async {
     final increment = _Increment();
-    final bloc = CounterBloc(fetchCounter: _Fetch(), incrementCounter: increment, eventSubscriber: _Subscriber(), logger: const NoopLogger());
+    final logger = _ThrowingLogger();
+    final bloc = CounterBloc(fetchCounter: _Fetch(), incrementCounter: increment, eventSubscriber: _Subscriber(), logger: logger);
     addTearDown(bloc.close);
     bloc.requestInitialLoad(const CounterInitialLoadRequested());
     await _until(bloc, (state) => state is CounterPostInitializedReadyState);
     bloc.add(const CounterIncrementRequested());
     await _until(bloc, (state) => state is CounterPostInitializedErrorState);
-    expect((bloc.state as CounterPostInitializedErrorState).data.counter.value, 7);
+    final errorState = bloc.state as CounterPostInitializedErrorState;
+    expect(errorState.cause, same(increment.failure));
+    expect(logger.errors.single, same(increment.failure));
+    expect(errorState.data.counter.value, 7);
     increment.fail = false;
     bloc.add(const CounterIncrementRequested());
     await _until(bloc, (state) => state is CounterPostInitializedCompleteState<void>);
