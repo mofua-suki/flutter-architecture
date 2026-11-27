@@ -192,6 +192,14 @@ final class TypedDomainEventBinding<D extends DomainEvent, E extends BlocEvent> 
 }
 
 extension BlocExtension<E extends BlocEvent, S extends State, T extends StateData> on BlocBase<E, S, T> {
+  void _logError(Object error, StackTrace stackTrace) {
+    try {
+      logger.error(error: error, stackTrace: stackTrace);
+    } catch (_) {
+      // ログ出力に失敗しても、元の例外でエラー状態へ遷移する。
+    }
+  }
+
   VoidFutureOr _initialLoadRequested(S state, original.Emitter<State> emit, Action<T> action) async {
     if (state is! InitializeReady) {
       throw IllegalStateException(actual: state, expected: InitializeReady);
@@ -207,7 +215,7 @@ extension BlocExtension<E extends BlocEvent, S extends State, T extends StateDat
       final shift = complete.shiftIfPossible<T>();
       emit(shift ?? complete);
     } catch (e, stackTrace) {
-      logger.error(error: e, stackTrace: stackTrace);
+      _logError(e, stackTrace);
       if (!emit.isDone && !isClosed) emit(loading.error(e));
     }
   }
@@ -228,7 +236,7 @@ extension BlocExtension<E extends BlocEvent, S extends State, T extends StateDat
       final complete = loading.next(result);
       emit(complete);
     } catch (e, stackTrace) {
-      logger.error(error: e, stackTrace: stackTrace);
+      _logError(e, stackTrace);
       if (!emit.isDone && !isClosed) emit(loading.error(e));
     }
   }
