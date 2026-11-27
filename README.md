@@ -1,23 +1,21 @@
 # Flutter Architecture
 
-BLoC、UseCase、Repository、Domain Event の責務と連携を示す Flutter サンプルです。
-カウンターで画面操作から保存、DomainEventによる再取得までを確認できます。
-「Open another screen」で二つ目の画面を開くと、別々の BLoC が同じ更新イベントを受けて表示を更新します。
+[日本語](https://github.com/mofua-suki/flutter-architecture/blob/main/README.ja.md)
 
-## 起動
+This runnable Flutter counter shows how a screen action reaches a BLoC, a use case and a repository. Open a second screen with **Open another screen**, then tap **+1**. Each screen has its own BLoC. Both receive the change event and fetch the saved value.
 
-Flutter 3.47.7を `.tool-versions` で指定しています。
+## Run the sample
+
+The project pins Flutter 3.47.7 in `.tool-versions`. The app requires Dart `>=3.13.0 <4.0.0`. Web scaffolding is included.
 
 ```sh
 flutter pub get
 flutter run -d chrome
 ```
 
-「+1」を押すとカウンターが更新されます。
-Repositoryはメモリ内に値を保存するため、アプリを再起動すると0に戻ります。
-Web用の起動ファイルを含みます。
+The in-memory counter starts at zero each time the app restarts.
 
-## 処理の流れ
+## Follow an update
 
 ```mermaid
 sequenceDiagram
@@ -30,55 +28,44 @@ sequenceDiagram
     View->>Bloc: CounterIncrementRequested
     Bloc->>Command: InputPortInvoker.invoke
     Command->>Repository: update
-    Repository-->>Command: 保存完了
+    Repository-->>Command: Save complete
     Command->>Bus: DomainEventPublisher.publish(CounterChanged)
-    Bus->>Bloc: DomainEventSubscriber経由で受信
-    Note over Bloc: CounterRefreshRequestedを逐次キューへ追加
+    Bus->>Bloc: Notify via DomainEventSubscriber
+    Note over Bloc: Queue CounterRefreshRequested
     Command-->>Bloc: OutputPort.onSuccess
     Bloc->>Query: InputPortInvoker.invoke
     Query->>Repository: fetch
     Repository-->>Query: Counter
     Query-->>Bloc: OutputPort.onSuccess
-    Bloc-->>View: 新しいState
+    Bloc-->>View: Updated state
 ```
 
-最初に [依存の組み立て](lib/di/app_dependencies.dart)、[CounterBloc](lib/presentation/bloc/counter/counter_bloc.dart)、[更新UseCase](lib/application/counter/command/increment_counter_use_case.dart) を読むと流れを追えます。
+Start with the [dependency wiring](lib/di/app_dependencies.dart), [CounterBloc](lib/presentation/bloc/counter/counter_bloc.dart) and [increment command](lib/application/counter/command/increment_counter_use_case.dart).
 
-| 配置 | 責務 |
+| Directory | Responsibility |
 | --- | --- |
-| `lib/presentation/bloc/share/bloc/` | BLoCの逐次処理、初期化、State、DomainEventからBLoC Eventへの変換 |
-| `lib/application/` | InputPort、OutputPort、Query、VoidCommand、ValueCommand、実行結果の取得 |
-| `lib/application/outbound_port/` | DomainEventを発行するための契約 |
-| `lib/domain/shared/` | DomainObject、Identifier、DomainEvent、Repositoryの基底契約 |
-| `lib/domain/counter/` | Counterと読み取り用、書き込み用Repositoryの契約 |
-| `lib/infrastructure/` | メモリ内Repository、EventBus、発行側アダプター |
-| `lib/presentation/event/` | DomainEvent購読側の契約とアダプター |
-| `lib/di/` | 各層の接続と共有インスタンスの管理 |
+| `lib/presentation/bloc/share/bloc/` | Sequential event handling, initialization, state and mapping domain events to BLoC events |
+| `lib/application/` | Input and output ports, queries, void and value commands, and their results |
+| `lib/application/outbound_port/` | Contract for publishing domain events |
+| `lib/domain/shared/` | Base contracts for domain objects, identifiers, events and repositories |
+| `lib/domain/counter/` | Counter and its read and write repository contracts |
+| `lib/infrastructure/` | In-memory repository, event bus and publishing adapters |
+| `lib/presentation/event/` | Domain event subscription contract and adapter |
+| `lib/di/` | Composition root and shared instances |
 
-UseCaseは入力を検証した後に処理を実行し、成功時は `OutputPort.onSuccess`、失敗時は `OutputPort.onError` に通知します。
-BLoCは `InputPortInvoker` で結果を取得します。
-Queryは読み取り用Repositoryに依存し、Commandは書き込み用Repositoryと `DomainEventPublisher` に依存します。
+A use case validates its input before execution and reports the result through `OutputPort.onSuccess` or `OutputPort.onError`. The BLoC gets that result through `InputPortInvoker`. Queries read from the read repository. Commands use the write repository and publish domain events after saving.
 
-DomainEventの発行は保存完了後に行います。
-購読側は `TypedDomainEventBinding` で機能固有のBLoC Eventへ変換し、画面操作と同じ逐次キューで処理します。
-同じEventBusを使う複数のBLoCへ配信でき、`close()` で購読を解除します。
-EventBusは同期配信で、再送や永続化は行いません。
-リスナーの対象判定と通知の失敗は、イベント型、リスナー型、例外、StackTraceとともに記録し、後続リスナーへの配送を続けます。保存成功後の配送失敗はCommandの失敗にしません。
-リスナーではイベントのキュー投入までを行い、非同期処理はBLoC Eventのハンドラへ置きます。保存成功は全画面の更新完了を意味しません。更新されなかった画面は「再読み込み」で復旧できます。
-標準構成では、DIがコンストラクタを通して`ConsoleLogger` を注入します。診断先の失敗でも保存結果と後続配送を維持します。
-UseCaseからOutputPort、Resultを経由する失敗は元のStackTraceを保持し、unwrapOrThrowでもその発生箇所を引き継ぎます。
+Each subscriber uses a `TypedDomainEventBinding` to put a feature-specific event in the same sequential queue as screen actions. BLoCs share a synchronous event bus and unsubscribe on `close()`. Delivery has no persistence or replay. If a listener fails during matching or notification, the bus logs the event type, listener type, error and stack trace, then continues with the remaining listeners. DI provides a `ConsoleLogger` by default. Diagnostic failures preserve the save result and subsequent deliveries.
 
-## サンプルの構成
+Listeners enqueue work for the BLoC event handler. A save can finish before all screens refresh. Tap **再読み込み** (reload) to refresh a screen that missed an update. Errors passed through a use case, output port and `Result` retain their original stack trace when rethrown by `unwrapOrThrow`.
 
-- UseCase の共通依存は Logger とし、Command には DomainEventPublisher も注入します。
-- Repositoryは `Repository`、`ReadRepository`、`WriteRepository` の基底契約とカウンター用の操作に絞りました。
-- 店舗業務、API通信、DB、トランザクション実装は含めていません。
-- `build_runner` による生成を必要としない構成です。
+## Sample scope
 
-## Mason
+Use cases receive a logger, and commands also receive a domain event publisher. The counter operations extend the `Repository`, `ReadRepository` and `WriteRepository` contracts. The sample runs without `build_runner`. Retail workflows, API calls, authentication, databases, durable events and transactions are outside its scope.
 
-ローカルのMasonライブラリでBLoCとUseCaseを生成します。
-グローバルなMason CLIのインストールは不要です。
+## Generate a BLoC or use case
+
+The generators use the local Mason library and can run without a global Mason CLI installation.
 
 ```sh
 dart run tool/mason/generate_bloc.dart ProductList product/list
@@ -86,32 +73,19 @@ dart run tool/mason/generate_use_case.dart FetchProductList query product
 dart run tool/mason/generate_use_case.dart SaveProduct command product
 ```
 
-BLoCは `lib/presentation/bloc/<出力先>/`、UseCaseは `lib/application/<出力先>/query/` または `command/` に配置します。
-対応するテストを `test/` にも生成します。
-名前はPascalCase、出力先は小文字と数字とアンダースコアを使い、階層を `/` で区切ります。
-既存ファイルは上書きしません。
+BLoCs go under `lib/presentation/bloc/<directory>/`. Use cases go under `lib/application/<directory>/query/` or `command/`. Matching tests go under `test/`. Use PascalCase names and slash-separated directory segments beginning with a lowercase letter and containing lowercase letters, digits or underscores. The generators skip existing files.
 
-生成したBLoCは空のStateDataで初期化を完了します。
-UseCaseは未実装箇所が分かるよう `UnimplementedError` を返す雛形です。
-Queryの `Never` を実際の戻り値に置き換え、Repositoryの注入と処理を実装してください。
-生成テストも業務上の期待値に変更します。
-DomainEventの接続は `CounterBloc` の `domainEventBindings` と更新UseCaseが実装例です。
+A generated BLoC initializes with empty state data. Generated use cases throw `UnimplementedError`. Replace a query's `Never` with the result type, inject the repository, implement the operation and update the generated test expectations. For event wiring, see `CounterBloc.domainEventBindings` in the constructor and the increment command.
 
 ## Linter
 
-`analysis_options.yaml` でFlutterのlintと、`tool/lint` の独自解析プラグインを有効にしています。
-独自ルールは12種類を含み、レイヤーの逆向き依存、QueryでのWriteRepository利用、強制アンラップ、propsの記載漏れなどを検出します。
-検出範囲は各ルールの実装に依存します。
-Future並列処理やTransactionRunnerなど、このサンプルに含めていないAPI向けのルールは、対応するコードがある場合にだけ働きます。
-型注釈省略ルールでは、推論元を保証できないクロージャ引数を検出対象から外しています。
+The root `analysis_options.yaml` enables Flutter lints and the local analyzer plugin under `tool/lint`. Its 12 rules cover issues such as reverse layer dependencies, write repositories in queries, forced null unwraps and missing entries in `props`. Rules for APIs outside the sample, including parallel futures and TransactionRunner, apply when that code is present. The redundant-type rule skips closure parameters whose inferred type it cannot establish.
 
-lintパッケージはアプリと別に依存解決します。
-アプリのテストが使うanalyzerとプラグインのanalyzer 13.0.0を分離するため、アプリの `dev_dependencies` には追加していません。
-[Dart公式の解析プラグイン設定](https://dart.dev/tools/analyzer-plugins) に従い、`plugins` からローカルパスを指定しています。
+Resolve the lint package separately to isolate its analyzer 13.0.0 dependency from the app's test analyzer. The root configuration references the local plugin through `plugins`, following the [Dart analyzer plugin configuration](https://dart.dev/tools/analyzer-plugins).
 
-## 検証
+## Verify
 
-アプリのルートで実行します。
+Run these commands from the app root.
 
 ```sh
 flutter pub get
@@ -121,7 +95,7 @@ flutter test
 flutter build web
 ```
 
-lintパッケージは別に検証します。
+Check the lint package separately from the app root.
 
 ```sh
 cd tool/lint
@@ -130,10 +104,9 @@ dart analyze
 dart test
 ```
 
-アプリのテストでは画面操作、複数BLoCへの配信、連続更新、購読解除、保存失敗、UseCaseの入力検証と出力通知を確認します。
+App tests cover screen actions, delivery to multiple BLoCs, sequential updates, unsubscribe, save failures, input validation and output notification.
 
-
-## 依存方向
+## Dependency direction
 
 ```mermaid
 flowchart LR
@@ -141,23 +114,16 @@ flowchart LR
   Presentation --> Domain
   Application --> Domain
   Infrastructure --> Domain
-  Infrastructure --> Ports[Application の出力側ポート]
-  CompositionRoot[依存の組み立て] --> Presentation
+  Infrastructure --> Ports[Application outbound ports]
+  CompositionRoot[Composition root] --> Presentation
   CompositionRoot --> Application
   CompositionRoot --> Infrastructure
 ```
 
-各レイヤーは共通の型を持つ `common` を参照できます。
-BLoC は InputPort と DomainEventSubscriber に依存し、Repository や具体的な UseCase を直接呼びません。
-カウンターは初期化後も Ready、Loading、Complete、Error を使い、失敗時に表示データを保持して再読み込みできます。
+Each layer can use shared types in `common`. BLoCs depend on input ports and the domain event subscriber. The counter uses Ready, Loading, Complete and Error states after initialization, retaining displayed data for recovery by reloading.
 
-複数の画面で Repository と EventBus を共有し、BLoC は画面ごとに生成して破棄します。
-最初の画面では `BlocViewBuilder` が生成、初期ロード、購読、破棄を担当します。
-二つ目の画面では標準の `BlocProvider` を使い、同じライフサイクルを管理する例を示します。
-メモリ保存のため、アプリを再起動すると値は失われます。
-API、認証、DB、永続イベント配信、トランザクションはサンプルの対象外です。
+Screens share the repository and event bus. Each owns its BLoC. The first uses `BlocViewBuilder` for creation, initial load, subscription and disposal. The second uses the standard `BlocProvider` for the same lifecycle.
 
-## 継続検証
+## Continuous verification
 
-GitHub Actionsでアプリの解析とテスト、独自lintの解析とテスト、Mason生成物の解析とテストを実行します。
-生成物の検証は `dart run tool/mason/verify_templates.dart` で一時コピー上にBLoC、Query、Commandを生成して行い、作業中のソースを変更しません。
+GitHub Actions analyzes and tests the app, the custom lint plugin and the Mason output. Run `dart run tool/mason/verify_templates.dart` to generate and verify a BLoC, query and command in a temporary copy.

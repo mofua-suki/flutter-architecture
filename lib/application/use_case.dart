@@ -33,19 +33,28 @@ sealed class UseCase<P extends InputPortParameter, T> implements InputPort<P, T>
   @override
   @nonVirtual
   Future<void> perform(P parameter, OutputPort<T> outputPort) async {
-    logger.debug(message: "ユースケースの実行を開始", context: Context({"useCase": runtimeType, "parameter": parameter}));
+    _log(() => logger.debug(message: "ユースケースの実行を開始", context: Context({"useCase": runtimeType, "parameter": parameter})));
     late final T result;
     try {
       parameter.validate();
       result = await execute(parameter);
-      logger.debug(message: "ユースケースの実行が完了", context: Context({"useCase": runtimeType, "result": result}));
     } catch (e, stackTrace) {
-      logger.error(message: "ユースケースの実行で例外が発生", context: Context({"useCase": runtimeType, "parameter": parameter}), error: e, stackTrace: stackTrace);
+      _log(() => logger.error(message: "ユースケースの実行で例外が発生", context: Context({"useCase": runtimeType, "parameter": parameter}), error: e, stackTrace: stackTrace));
       await outputPort.onError(e.asOrNull<Exception>() ?? UnexpectedThrowableException(e), stackTrace);
       return;
     }
 
+    _log(() => logger.debug(message: "ユースケースの実行が完了", context: Context({"useCase": runtimeType, "result": result})));
     await outputPort.onSuccess(result);
+  }
+
+  // 保存後にログ出力が失敗しても、処理結果は呼び出し元に伝える。
+  void _log(void Function() write) {
+    try {
+      write();
+    } catch (_) {
+      // OutputPort への通知を続ける。
+    }
   }
 
   /// ユースケースの実行
