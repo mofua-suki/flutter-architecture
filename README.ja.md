@@ -90,7 +90,7 @@ dart run tool/mason/generate_use_case.dart SaveProduct command product
 
 BLoCは `lib/presentation/bloc/<出力先>/`、UseCaseは `lib/application/<出力先>/query/` または `command/` に配置します。
 対応するテストを `test/` にも生成します。
-名前はPascalCase、出力先は小文字と数字とアンダースコアを使い、階層を `/` で区切ります。
+名前はPascalCaseで指定します。出力先は各階層を英小文字で始め、英小文字・数字・アンダースコアを使います。階層は `/` で区切ります。
 既存ファイルは上書きしません。
 
 生成したBLoCは空のStateDataで初期化を完了します。
